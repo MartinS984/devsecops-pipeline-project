@@ -16,9 +16,9 @@ jobs:
         with:
           fetch-depth: 0
 
-      # 1. SCAN FOR SECRETS IN REPO HISTORY
+# 1. SCAN FOR SECRETS IN REPO HISTORY
       - name: Run TruffleHog Secret Scanner
-        uses: trufflesecurity/trufflehog@v3
+        uses: trufflesecurity/trufflehog@main
         with:
           path: ./
           base: ""
