@@ -12,22 +12,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
       # 1. SCAN FOR SECRETS IN REPO HISTORY (Fixed Argument)
       - name: Run TruffleHog Secret Scanner
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@a1f49615a133d13a96409890d986b627be9539ea # v3.82.0
         with:
           path: ./
           base: ""
           head: ${{ github.ref_name }}
-          # We dropped extra_args here to avoid the boolean syntax conflict
 
       # 2. SOFTWARE COMPOSITION ANALYSIS (SCA)
       - name: Run Trivy FS Dependency Scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2596ed1439edf8f090d79c6734185764d0263 # v0.24.0
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -36,9 +35,9 @@ jobs:
 
       # 3. STATIC APPLICATION SECURITY TESTING (SAST)
       - name: Run Semgrep Static Analysis
-        run: |
-          pip install semgrep
-          semgrep scan --config auto --error
+        uses: semgrep/semgrep-action@713e2790cb0116750fbf57a829a7702a690f117c # v1.8.0
+        with:
+          config: 'auto'
 
   container-security:
     name: Container Hardening & Scan
@@ -46,14 +45,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@c16764a492850cfc9f96868992c6ea485b61137a # v3.10.0
 
       # 4. BUILD CONTAINER IMAGE LOCAL-ONLY FOR TESTING
       - name: Build Target Image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca019021633022aa21e3031174a9474bc90002e9 # v5.4.0
         with:
           context: .
           tags: devsecops-target:latest
@@ -61,7 +60,7 @@ jobs:
 
       # 5. SCAN COMPILED CONTAINER LAYERS
       - name: Run Trivy Container Image Scan
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@18f2596ed1439edf8f090d79c6734185764d0263 # v0.24.0
         with:
           input: '/tmp/image.tar'
           severity: 'CRITICAL'
