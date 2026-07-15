@@ -1,0 +1,68 @@
+name: DevSecOps Security Automation
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  static-analysis:
+    name: SAST & Dependency Code Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 1. SCAN FOR SECRETS IN REPO HISTORY (Fixed Argument)
+      - name: Run TruffleHog Secret Scanner
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ""
+          head: ${{ github.ref_name }}
+          # We dropped extra_args here to avoid the boolean syntax conflict
+
+      # 2. SOFTWARE COMPOSITION ANALYSIS (SCA)
+      - name: Run Trivy FS Dependency Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          exit-code: '1' # Break build if vulnerabilities are found
+          severity: 'CRITICAL,HIGH'
+
+      # 3. STATIC APPLICATION SECURITY TESTING (SAST)
+      - name: Run Semgrep Static Analysis
+        run: |
+          pip install semgrep
+          semgrep scan --config auto --error
+
+  container-security:
+    name: Container Hardening & Scan
+    needs: static-analysis
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. BUILD CONTAINER IMAGE LOCAL-ONLY FOR TESTING
+      - name: Build Target Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: devsecops-target:latest
+          outputs: type=docker,dest=/tmp/image.tar
+
+      # 5. SCAN COMPILED CONTAINER LAYERS
+      - name: Run Trivy Container Image Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          input: '/tmp/image.tar'
+          severity: 'CRITICAL'
+          exit-code: '1'
